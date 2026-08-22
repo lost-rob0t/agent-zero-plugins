@@ -95,6 +95,11 @@ class PolicyTests(unittest.TestCase):
         self.assertFalse(policy.evaluate(["extension", "list"]).allowed)
         self.assertFalse(policy.evaluate(["my-shell-alias", "arg"]).allowed)
 
+    def test_codespace_ssh_is_denied(self):
+        result = policy.evaluate(["codespace", "ssh", "--", "gh", "repo", "delete", "owner/repo"])
+        self.assertFalse(result.allowed)
+        self.assertIn("remote command execution", result.reason.lower())
+
     def test_auth_token_exposure_is_denied(self):
         self.assertFalse(policy.evaluate(["auth", "token"]).allowed)
         self.assertFalse(policy.evaluate(["auth", "status", "--show-token"]).allowed)
