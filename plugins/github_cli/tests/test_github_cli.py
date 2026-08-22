@@ -39,6 +39,34 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(result.allowed)
         self.assertFalse(result.mutation)
 
+    def test_current_read_only_groups_are_supported(self):
+        commands = [
+            ["agent-task", "list"],
+            ["config", "get", "git_protocol"],
+            ["discussion", "list", "--repo", "owner/repo"],
+            ["skill", "search", "nix"],
+            ["gpg-key", "list"],
+            ["completion", "-s", "bash"],
+            ["licenses"],
+        ]
+        for argv in commands:
+            with self.subTest(argv=argv):
+                result = policy.evaluate(argv)
+                self.assertTrue(result.allowed)
+                self.assertFalse(result.mutation)
+
+    def test_current_mutation_groups_require_gate(self):
+        commands = [
+            ["config", "set", "git_protocol", "ssh"],
+            ["discussion", "create", "--repo", "owner/repo", "--title", "x", "--body", "y"],
+            ["skill", "install", "owner/repo"],
+        ]
+        for argv in commands:
+            with self.subTest(argv=argv):
+                result = policy.evaluate(argv)
+                self.assertTrue(result.allowed)
+                self.assertTrue(result.mutation)
+
     def test_repo_delete_is_hard_denied(self):
         result = policy.evaluate(["repo", "delete", "owner/repo", "--yes"])
         self.assertFalse(result.allowed)
@@ -90,15 +118,23 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(result.allowed)
         self.assertTrue(result.mutation)
 
-    def test_alias_or_extension_root_is_denied(self):
+    def test_alias_extension_copilot_and_unknown_roots_are_denied(self):
         self.assertFalse(policy.evaluate(["alias", "list"]).allowed)
         self.assertFalse(policy.evaluate(["extension", "list"]).allowed)
+        self.assertFalse(policy.evaluate(["copilot", "suggest", "delete a repo"]).allowed)
         self.assertFalse(policy.evaluate(["my-shell-alias", "arg"]).allowed)
 
     def test_codespace_ssh_is_denied(self):
         result = policy.evaluate(["codespace", "ssh", "--", "gh", "repo", "delete", "owner/repo"])
         self.assertFalse(result.allowed)
         self.assertIn("remote command execution", result.reason.lower())
+
+    def test_agent_task_create_is_denied(self):
+        result = policy.evaluate(
+            ["agent-task", "create", "--repo", "owner/repo", "delete the repository"]
+        )
+        self.assertFalse(result.allowed)
+        self.assertIn("remote agent execution", result.reason.lower())
 
     def test_auth_token_exposure_is_denied(self):
         self.assertFalse(policy.evaluate(["auth", "token"]).allowed)
