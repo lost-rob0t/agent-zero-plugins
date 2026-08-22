@@ -8,7 +8,9 @@ from pathlib import Path
 
 
 STATE_DIR = Path(os.environ.get("A0_GITHUB_CLI_STATE_DIR", "/a0/usr/state/github_cli"))
-CONFIG_DIR = STATE_DIR / "gh"
+CONFIG_DIR = Path(
+    os.environ.get("A0_GITHUB_CLI_GH_CONFIG_DIR", str(STATE_DIR / "gh"))
+)
 ENV_FILE = STATE_DIR / "env"
 
 
@@ -42,14 +44,14 @@ def main() -> int:
 
     status = _run(["gh", "auth", "status"], check=False)
     if status.returncode != 0:
-        print("gh is installed but not authenticated yet.")
+        print("gh is installed but not authenticated in the persistent config yet.")
         print(
             "Authenticate interactively with: "
             f"GH_CONFIG_DIR={CONFIG_DIR} gh auth login"
         )
         return 0
 
-    print("gh authentication status: OK")
+    print("persisted gh authentication status: OK")
     return 0
 
 
@@ -77,15 +79,10 @@ def _install_gh() -> int:
 
 
 def _persist_token(token: str) -> int:
-    env = os.environ.copy()
-    env["GH_CONFIG_DIR"] = str(CONFIG_DIR)
-    env.pop("GH_TOKEN", None)
-    env.pop("GITHUB_TOKEN", None)
-    env["GH_PROMPT_DISABLED"] = "1"
-
+    env = _persistent_env()
     process = subprocess.run(
         ["gh", "auth", "login", "--hostname", "github.com", "--with-token"],
-        input=token,
+        input=token + "\n",
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -110,12 +107,18 @@ def _migrate_existing_config() -> None:
         print(f"Migrated existing gh auth config from {source_hosts}")
 
 
-def _run(command: list[str], *, check: bool) -> subprocess.CompletedProcess[str]:
+def _persistent_env() -> dict[str, str]:
     env = os.environ.copy()
     env["GH_CONFIG_DIR"] = str(CONFIG_DIR)
     env["GH_PROMPT_DISABLED"] = "1"
     env["GH_NO_UPDATE_NOTIFIER"] = "1"
-    return subprocess.run(command, text=True, env=env, check=check)
+    env.pop("GH_TOKEN", None)
+    env.pop("GITHUB_TOKEN", None)
+    return env
+
+
+def _run(command: list[str], *, check: bool) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, text=True, env=_persistent_env(), check=check)
 
 
 def _chmod(path: Path, mode: int) -> None:
