@@ -4,8 +4,10 @@ import asyncio
 import os
 import re
 import shutil
+import uuid
 from typing import Any
 
+from helpers.print_style import PrintStyle
 from helpers.tool import Response, Tool
 from usr.plugins.github_cli.helpers.gates import config_dir, consume_gate, create_gate, state_dir
 from usr.plugins.github_cli.helpers.policy import evaluate, validate_argv
@@ -20,6 +22,32 @@ TOKEN_PATTERNS = [
 
 
 class Gh(Tool):
+    async def before_execution(self, **kwargs: Any):
+        self.log = self.get_log_object()
+        safe = _safe_log_args(self.args)
+        PrintStyle(
+            font_color="#1B4F72",
+            padding=True,
+            background_color="white",
+            bold=True,
+        ).print(f"{self.agent.agent_name}: Using tool '{self.name}'")
+        PrintStyle(font_color="#85C1E9").print(
+            f"Action: {safe['action']} | Operation: {safe['operation']} | "
+            f"argc: {safe['argc']} | gate: {safe['gate']}"
+        )
+
+    def get_log_object(self):
+        pre_id = str(uuid.uuid4())
+        heading = f"icon://construction {self.agent.agent_name}: Using tool '{self.name}'"
+        return self.agent.context.log.log(
+            type="tool",
+            heading=heading,
+            content="",
+            kvps=_safe_log_args(self.args),
+            _tool_name=self.name,
+            id=pre_id,
+        )
+
     async def execute(
         self,
         action: str = "status",
@@ -169,9 +197,27 @@ async def _run_gh(argv: list[str], timeout_seconds: int) -> dict[str, Any]:
     return {"returncode": returncode, "stdout": stdout.strip(), "stderr": stderr.strip()}
 
 
+def _safe_log_args(args: dict[str, Any]) -> dict[str, Any]:
+    argv = args.get("argv")
+    argv_list = argv if isinstance(argv, list) else []
+    return {
+        "action": str(args.get("action") or "status"),
+        "operation": _operation(argv_list) if argv_list else "gh status",
+        "argc": len(argv_list),
+        "gate": "present" if args.get("gate") else "none",
+        "timeout_seconds": args.get("timeout_seconds", 120),
+    }
+
+
 def _operation(argv: list[str]) -> str:
-    visible = [item for item in argv[:2] if not item.startswith("-")]
-    return "gh " + " ".join(visible or [argv[0]])
+    if not argv:
+        return "gh"
+    root = argv[0]
+    if root in {"api", "browse", "status"}:
+        return f"gh {root}"
+    if len(argv) > 1 and not argv[1].startswith("-"):
+        return f"gh {root} {argv[1]}"
+    return f"gh {root}"
 
 
 def _bounded_timeout(value: int) -> int:
