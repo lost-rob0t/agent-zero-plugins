@@ -4,7 +4,6 @@ import asyncio
 import os
 import re
 import shutil
-from pathlib import Path
 from typing import Any
 
 from helpers.tool import Response, Tool
@@ -142,6 +141,8 @@ async def _run_gh(argv: list[str], timeout_seconds: int) -> dict[str, Any]:
     env["GH_PROMPT_DISABLED"] = "1"
     env["GH_NO_UPDATE_NOTIFIER"] = "1"
     env["GH_PAGER"] = "cat"
+    env.pop("GH_TOKEN", None)
+    env.pop("GITHUB_TOKEN", None)
 
     process = await asyncio.create_subprocess_exec(
         gh_path,
