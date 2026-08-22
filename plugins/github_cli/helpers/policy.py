@@ -33,7 +33,7 @@ READ_ONLY = {
     "attestation": {"download", "trusted-root", "verify"},
     "auth": {"status"},
     "cache": {"list"},
-    "codespace": {"list", "logs", "ports", "ssh", "view"},
+    "codespace": {"list", "logs", "ports", "view"},
     "gist": {"clone", "list", "view"},
     "issue": {"list", "status", "view"},
     "label": {"list"},
@@ -93,6 +93,10 @@ def evaluate(argv: list[str]) -> PolicyResult:
     if secret_reason:
         return PolicyResult(False, False, secret_reason)
 
+    tunnel_reason = _execution_tunnel_reason(argv)
+    if tunnel_reason:
+        return PolicyResult(False, False, tunnel_reason)
+
     delete_reason = _repository_delete_reason(argv)
     if delete_reason:
         return PolicyResult(False, True, delete_reason)
@@ -124,6 +128,12 @@ def _credential_exposure_reason(argv: list[str]) -> str:
         return "gh auth token is disabled because it exposes stored credentials."
     if argv and argv[0] == "auth" and "--show-token" in lowered:
         return "--show-token is disabled because it exposes stored credentials."
+    return ""
+
+
+def _execution_tunnel_reason(argv: list[str]) -> str:
+    if argv[:2] == ["codespace", "ssh"]:
+        return "gh codespace ssh is disabled because it provides arbitrary remote command execution."
     return ""
 
 
