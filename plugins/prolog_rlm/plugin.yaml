@@ -1,0 +1,7 @@
+name: prolog_rlm
+title: Prolog RLM
+description: Structured Agent Zero bridge to prolog-rlm for recursive reasoning and verification.
+version: 0.1.0
+settings_sections: []
+per_project_config: false
+per_agent_config: false
