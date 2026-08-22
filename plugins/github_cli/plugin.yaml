@@ -1,0 +1,7 @@
+name: github_cli
+title: GitHub CLI
+description: GitHub automation through gh with persistent config and RAGE-gated mutations.
+version: 0.1.0
+settings_sections: []
+per_project_config: false
+per_agent_config: false
