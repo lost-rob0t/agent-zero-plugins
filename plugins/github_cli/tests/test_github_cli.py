@@ -48,6 +48,7 @@ class PolicyTests(unittest.TestCase):
             ["gpg-key", "list"],
             ["completion", "-s", "bash"],
             ["licenses"],
+            ["codespace", "ports", "--codespace", "example"],
         ]
         for argv in commands:
             with self.subTest(argv=argv):
@@ -60,6 +61,8 @@ class PolicyTests(unittest.TestCase):
             ["config", "set", "git_protocol", "ssh"],
             ["discussion", "create", "--repo", "owner/repo", "--title", "x", "--body", "y"],
             ["skill", "install", "owner/repo"],
+            ["codespace", "ports", "visibility", "8080:private"],
+            ["codespace", "ports", "forward", "8080:8080"],
         ]
         for argv in commands:
             with self.subTest(argv=argv):
