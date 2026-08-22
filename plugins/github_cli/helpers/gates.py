@@ -17,7 +17,7 @@ def state_dir() -> Path:
 
 
 def config_dir() -> Path:
-    override = os.environ.get("GH_CONFIG_DIR")
+    override = os.environ.get("A0_GITHUB_CLI_GH_CONFIG_DIR")
     if override:
         return Path(override)
 
