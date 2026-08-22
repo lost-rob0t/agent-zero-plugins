@@ -175,6 +175,7 @@ async def _run_gh(argv: list[str], timeout_seconds: int) -> dict[str, Any]:
     process = await asyncio.create_subprocess_exec(
         gh_path,
         *argv,
+        stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=env,
