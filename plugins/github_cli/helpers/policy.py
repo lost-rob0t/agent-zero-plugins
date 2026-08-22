@@ -5,17 +5,24 @@ from urllib.parse import urlparse
 
 
 ALLOWED_ROOTS = {
+    "agent-task",
     "api",
     "attestation",
     "auth",
     "browse",
     "cache",
     "codespace",
+    "completion",
+    "config",
+    "discussion",
     "gist",
+    "gpg-key",
     "issue",
     "label",
+    "licenses",
     "org",
     "pr",
+    "preview",
     "project",
     "release",
     "repo",
@@ -23,6 +30,7 @@ ALLOWED_ROOTS = {
     "run",
     "search",
     "secret",
+    "skill",
     "ssh-key",
     "status",
     "variable",
@@ -30,27 +38,32 @@ ALLOWED_ROOTS = {
 }
 
 READ_ONLY = {
+    "agent-task": {"list", "view"},
     "attestation": {"download", "trusted-root", "verify"},
     "auth": {"status"},
     "cache": {"list"},
     "codespace": {"list", "logs", "ports", "view"},
+    "config": {"get", "list"},
+    "discussion": {"list", "view"},
     "gist": {"clone", "list", "view"},
+    "gpg-key": {"list"},
     "issue": {"list", "status", "view"},
     "label": {"list"},
     "org": {"list"},
     "pr": {"checks", "diff", "list", "status", "view"},
     "project": {"field-list", "item-list", "list", "view"},
     "release": {"download", "list", "view"},
-    "repo": {"clone", "list", "view"},
+    "repo": {"clone", "gitignore", "license", "list", "read-dir", "read-file", "view"},
     "ruleset": {"check", "list", "view"},
     "run": {"list", "view", "watch"},
     "secret": {"list"},
+    "skill": {"list", "preview", "search"},
     "ssh-key": {"list"},
     "variable": {"get", "list"},
     "workflow": {"list", "view"},
 }
 
-READ_ONLY_ROOTS = {"browse", "search", "status"}
+READ_ONLY_ROOTS = {"browse", "completion", "licenses", "search", "status"}
 
 
 @dataclass(frozen=True)
@@ -86,7 +99,7 @@ def evaluate(argv: list[str]) -> PolicyResult:
         return PolicyResult(
             allowed=False,
             mutation=False,
-            reason="Only built-in gh command groups are allowed; aliases and extensions are not executable.",
+            reason="Only approved built-in gh command groups are executable; aliases, extensions, Copilot CLI, and unknown commands are denied.",
         )
 
     secret_reason = _credential_exposure_reason(argv)
@@ -134,6 +147,8 @@ def _credential_exposure_reason(argv: list[str]) -> str:
 def _execution_tunnel_reason(argv: list[str]) -> str:
     if argv[:2] == ["codespace", "ssh"]:
         return "gh codespace ssh is disabled because it provides arbitrary remote command execution."
+    if argv[:2] == ["agent-task", "create"]:
+        return "gh agent-task create is disabled because it delegates arbitrary remote agent execution outside this policy boundary."
     return ""
 
 
