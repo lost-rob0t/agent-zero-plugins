@@ -40,7 +40,6 @@ def create_gate(context_id: str, argv: list[str]) -> dict[str, object]:
         "gate_id": gate_id,
         "context_id": context_id,
         "argv_sha256": argv_digest(argv),
-        "argv": argv,
         "created_at": now,
         "expires_at": now + GATE_TTL_SECONDS,
         "consumed_at": None,
