@@ -191,7 +191,7 @@ def _api_method(argv: list[str]) -> str:
         elif item.startswith("--method="):
             method = item.split("=", 1)[1].upper()
         elif item.startswith("-X") and len(item) > 2:
-            method = item[2:].upper()
+            method = item[2:].lstrip("=").upper()
 
     if method == "GET" and any(
         item in {"-f", "--raw-field", "-F", "--field", "--input"}
