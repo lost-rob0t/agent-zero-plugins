@@ -42,7 +42,7 @@ READ_ONLY = {
     "attestation": {"download", "trusted-root", "verify"},
     "auth": {"status"},
     "cache": {"list"},
-    "codespace": {"list", "logs", "ports", "view"},
+    "codespace": {"list", "logs", "view"},
     "config": {"get", "list"},
     "discussion": {"list", "view"},
     "gist": {"clone", "list", "view"},
@@ -118,14 +118,23 @@ def evaluate(argv: list[str]) -> PolicyResult:
         mutation = _api_is_mutation(argv)
         return PolicyResult(True, mutation, "GitHub API command accepted by policy.")
 
-    if root in READ_ONLY_ROOTS:
-        return PolicyResult(True, False, "Read-only gh command.")
-
-    subcommand = _subcommand(argv)
-    if subcommand and subcommand in READ_ONLY.get(root, set()):
+    if _is_read_only_command(argv):
         return PolicyResult(True, False, "Read-only gh command.")
 
     return PolicyResult(True, True, "State-changing gh command requires a RAGE gate.")
+
+
+def _is_read_only_command(argv: list[str]) -> bool:
+    root = argv[0]
+    if root in READ_ONLY_ROOTS:
+        return True
+
+    if argv[:2] == ["codespace", "ports"]:
+        nested = set(argv[2:])
+        return "forward" not in nested and "visibility" not in nested
+
+    subcommand = _subcommand(argv)
+    return bool(subcommand and subcommand in READ_ONLY.get(root, set()))
 
 
 def _subcommand(argv: list[str]) -> str:
