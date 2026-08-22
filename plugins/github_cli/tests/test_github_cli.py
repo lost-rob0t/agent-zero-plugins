@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,7 @@ def load_module(name: str, relative_path: str):
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {path}")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -44,6 +46,12 @@ class PolicyTests(unittest.TestCase):
 
     def test_rest_repo_delete_is_hard_denied(self):
         result = policy.evaluate(["api", "--method", "DELETE", "repos/owner/repo"])
+        self.assertFalse(result.allowed)
+
+    def test_rest_repo_delete_with_boolean_flag_is_hard_denied(self):
+        result = policy.evaluate(
+            ["api", "--method", "DELETE", "--paginate", "repos/owner/repo"]
+        )
         self.assertFalse(result.allowed)
 
     def test_enterprise_rest_repo_delete_is_hard_denied(self):
