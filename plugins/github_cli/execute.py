@@ -12,6 +12,7 @@ CONFIG_DIR = Path(
     os.environ.get("A0_GITHUB_CLI_GH_CONFIG_DIR", str(STATE_DIR / "gh"))
 )
 ENV_FILE = STATE_DIR / "env"
+HOSTS_FILE = CONFIG_DIR / "hosts.yml"
 
 
 def main() -> int:
@@ -42,12 +43,14 @@ def main() -> int:
     else:
         print("No GH_TOKEN/GITHUB_TOKEN found; existing persisted gh authentication was left unchanged.")
 
+    _chmod(HOSTS_FILE, 0o600)
+
     status = _run(["gh", "auth", "status"], check=False)
     if status.returncode != 0:
         print("gh is installed but not authenticated in the persistent config yet.")
         print(
             "Authenticate interactively with: "
-            f"GH_CONFIG_DIR={CONFIG_DIR} gh auth login"
+            f"GH_CONFIG_DIR={CONFIG_DIR} gh auth login --insecure-storage"
         )
         return 0
 
@@ -79,19 +82,29 @@ def _install_gh() -> int:
 
 
 def _persist_token(token: str) -> int:
-    env = _persistent_env()
     process = subprocess.run(
-        ["gh", "auth", "login", "--hostname", "github.com", "--with-token"],
+        [
+            "gh",
+            "auth",
+            "login",
+            "--hostname",
+            "github.com",
+            "--with-token",
+            "--insecure-storage",
+        ],
         input=token + "\n",
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=env,
+        env=_persistent_env(),
         check=False,
     )
     if process.returncode != 0:
         print("ERROR: gh auth login failed while persisting the environment token.")
-    return process.returncode
+        return process.returncode
+
+    _chmod(HOSTS_FILE, 0o600)
+    return 0
 
 
 def _migrate_existing_config() -> None:
@@ -99,11 +112,10 @@ def _migrate_existing_config() -> None:
     if not old.is_dir() or old.resolve() == CONFIG_DIR.resolve():
         return
 
-    destination_hosts = CONFIG_DIR / "hosts.yml"
     source_hosts = old / "hosts.yml"
-    if source_hosts.is_file() and not destination_hosts.exists():
-        shutil.copy2(source_hosts, destination_hosts)
-        _chmod(destination_hosts, 0o600)
+    if source_hosts.is_file() and not HOSTS_FILE.exists():
+        shutil.copy2(source_hosts, HOSTS_FILE)
+        _chmod(HOSTS_FILE, 0o600)
         print(f"Migrated existing gh auth config from {source_hosts}")
 
 
