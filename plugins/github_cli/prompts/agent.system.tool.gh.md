@@ -19,6 +19,7 @@ Read-only commands can run directly with `action=run`. State-changing commands r
 Hard rules:
 - Repository deletion is forbidden. Never attempt `gh repo delete`, REST repository deletion, GraphQL `deleteRepository`, or a bypass.
 - Aliases and extensions are not executable through this tool.
+- `gh codespace ssh` is disabled because it is an arbitrary remote-command tunnel.
 - Never request `gh auth token` or `--show-token`.
 - Do not put credentials or bearer tokens in argv. Authentication belongs in the plugin's persistent `GH_CONFIG_DIR`.
 - The tool invokes `gh` directly without a shell. Supply arguments as separate JSON array elements.
