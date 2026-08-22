@@ -185,8 +185,6 @@ def _api_endpoint(argv: list[str]) -> str:
         "--input",
         "--hostname",
         "--cache",
-        "--paginate",
-        "--slurp",
         "--template",
         "--jq",
     }
@@ -210,7 +208,11 @@ def _is_repository_endpoint(endpoint: str) -> bool:
     parsed = urlparse(endpoint)
     path = parsed.path if parsed.scheme else endpoint.split("?", 1)[0]
     parts = [part for part in path.strip("/").split("/") if part]
-    return len(parts) == 3 and parts[0].lower() == "repos"
+    try:
+        repos_index = next(index for index, part in enumerate(parts) if part.lower() == "repos")
+    except StopIteration:
+        return False
+    return len(parts) == repos_index + 3
 
 
 def _is_graphql_endpoint(endpoint: str) -> bool:
@@ -218,7 +220,7 @@ def _is_graphql_endpoint(endpoint: str) -> bool:
         return False
     parsed = urlparse(endpoint)
     path = parsed.path if parsed.scheme else endpoint.split("?", 1)[0]
-    return path.strip("/").lower() == "graphql"
+    return path.strip("/").lower().endswith("graphql")
 
 
 def _has_uninspectable_graphql_input(argv: list[str]) -> bool:
